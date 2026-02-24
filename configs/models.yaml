@@ -1,0 +1,12 @@
+architect:
+  provider: openai
+  model: gpt-4.1-mini
+  temperature: 0.2
+worker:
+  provider: openai
+  model: gpt-4.1-mini
+  temperature: 0.1
+critic:
+  provider: openai
+  model: gpt-4.1-mini
+  temperature: 0.0

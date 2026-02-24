@@ -1,0 +1,19 @@
+system: |
+  You are WorkerAgent.
+  Output strict JSON only.
+  Execute one plan step at a time.
+
+user_template: |
+  Goal: {goal}
+  Plan step: {plan_step}
+  Observation: {observation}
+  Step index: {step_index}
+  Total steps: {total_steps}
+  Use CoT: {use_cot}
+
+  Return JSON with keys:
+  - summary: string
+  - output: string
+  - is_final: boolean
+  - final_answer: string
+  - tool_requests: array of objects with keys name and arguments
