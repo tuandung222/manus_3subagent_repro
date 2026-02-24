@@ -1,127 +1,143 @@
-# Kế Hoạch Hiện Thực Tracing để Thu Thập Trajectory Data (Planner/Worker/Verifier)
+# Tracing Implementation Plan for Trajectory Data Collection (Planner, Worker, Verifier)
 
-## 0) Mục tiêu
+## 0) Objectives
 
-Xây dựng hạ tầng tracing có thể:
-1. Thu thập trajectory đủ giàu tín hiệu để tuning riêng cho `Planner`, `Worker`, `Verifier`.
-2. Giữ lineage đầy đủ từ `run -> step -> event -> dataset row`.
-3. Hỗ trợ cả huấn luyện SFT lẫn preference/reward modeling.
+Build a tracing foundation that can:
 
-## 1) Phạm vi dữ liệu cần thu
+1. Capture role-specific trajectory signals for tuning `Planner`, `Worker`, and `Verifier`.
+2. Preserve full lineage from `run -> step -> event -> dataset row`.
+3. Support both SFT workflows and preference/reward-modeling pipelines.
 
-### 1.1 Planner (Architect)
-- Input: goal, observation snapshot, condensed history, tool availability mask.
-- Output: plan steps + rationale + confidence + planning metadata.
-- Label phụ trợ: critic verdict sau mỗi cycle (`continue/replan/end`), final success/fail.
+## 1) Required Data Scope
 
-### 1.2 Worker
-- Input: current step, env state, allowed tools, previous failures.
-- Output: action/tool request, tool args, intermediate reasoning summary.
-- Outcome: tool result, env response, error taxonomy, retry behavior.
+## 1.1 Planner (Architect)
 
-### 1.3 Verifier (Critic)
-- Input: full local state (plan progress + action trace + outcome evidence).
-- Output: verdict (`continue/replan/end`), feedback, risk flags.
-- Label phụ trợ: mismatch giữa verdict và outcome thực tế (ex-post correctness).
+- Inputs: goal, observation snapshot, condensed history, tool-availability mask.
+- Outputs: plan steps, rationale, confidence, planning metadata.
+- Auxiliary labels: verifier verdict per cycle (`continue/replan/end`), final success/failure.
 
-## 2) Thiết kế schema tracing v2
+## 1.2 Worker
 
-## 2.1 Session-level (`session.json`)
+- Inputs: current step, environment state, allowed tools, prior failures.
+- Outputs: action/tool request, tool args, intermediate reasoning summary.
+- Outcomes: tool result, environment response, error taxonomy, retry behavior.
+
+## 1.3 Verifier (Critic)
+
+- Inputs: local execution state (plan progress, action traces, evidence).
+- Outputs: verdict (`continue/replan/end`), feedback, risk flags.
+- Auxiliary labels: verdict mismatch against eventual outcome (ex-post correctness).
+
+## 2) Tracing Schema v2 Design
+
+## 2.1 Session-Level (`session.json`)
+
 - `schema_version`, `run_id`, `goal`, `started_at`, `finished_at`
-- `model_stack` (planner/worker/verifier + hyperparameters)
-- `runtime_config` (max_steps, prompt sources, tool mode)
-- `data_governance` (redaction policy, pii_scan status)
-- `summary` (success, step_count, cost/tokens, failure class)
+- `model_stack` (planner/worker/verifier models + hyperparameters)
+- `runtime_config` (max steps, prompt sources, tool mode)
+- `data_governance` (redaction policy, PII scan status)
+- `summary` (success, step count, token/cost estimate, failure class)
 
-## 2.2 Event-level (`events.jsonl`)
-Bắt buộc bổ sung các event chuẩn:
+## 2.2 Event-Level (`events.jsonl`)
+
+Required event types:
+
 - `planner_input`, `planner_output`
 - `worker_input`, `worker_action`, `worker_tool_call`, `worker_tool_result`, `worker_output`
 - `verifier_input`, `verifier_output`
-- `orchestrator_transition` (from_state, to_state, reason)
+- `orchestrator_transition` (`from_state`, `to_state`, `reason`)
 - `env_observation`
 - `episode_error`, `episode_end`
 
-Mỗi event phải có:
-- `run_id`, `step`, `event_id`, `event_type`, `timestamp`
-- `parent_event_id` (để dựng graph nhân-quả)
-- `payload` typed (không chỉ free text)
+Mandatory event fields:
 
-## 2.3 Derived views cho training
-Sinh tự động 3 view:
+- `run_id`, `step`, `event_id`, `event_type`, `timestamp`
+- `parent_event_id` (for causal graph reconstruction)
+- typed `payload` (not raw free text only)
+
+## 2.3 Derived Training Views
+
+Generate these views automatically:
+
 - `planner_sft.jsonl`
 - `worker_sft.jsonl`
 - `verifier_sft.jsonl`
+- `verifier_pref_pairs.jsonl` (good vs bad verdicts)
+- `worker_recovery_cases.jsonl` (failure-to-recovery trajectories)
 
-Và 2 view nâng cao:
-- `verifier_pref_pairs.jsonl` (good vs bad verdict)
-- `worker_recovery_cases.jsonl` (episodes có lỗi + recovery thành công)
+## 3) Data Collection Pipeline
 
-## 3) Pipeline thu thập dữ liệu
+## Phase A: Instrumentation
 
-### Giai đoạn A: Instrumentation
-1. Chuẩn hóa event emitters cho cả graph node + tool runtime.
-2. Gắn `transition reason` rõ ở router level.
-3. Ghi prompt thực tế sau khi render + config hash.
+1. Standardize event emitters across graph nodes and tool runtime.
+2. Record explicit transition reasons at router level.
+3. Persist rendered prompts and config hashes per LLM call.
 
-### Giai đoạn B: Collection
-1. Chạy benchmark suite (synthetic + real-tool) theo ma trận task.
-2. Thu trace theo batch với seed cố định + seed ngẫu nhiên.
-3. Lưu raw trace immutable, không sửa tại chỗ.
+## Phase B: Collection
 
-### Giai đoạn C: Curation
-1. Redaction + PII scan.
-2. Data quality checks: missing keys, broken lineage, schema drift.
-3. Dedup theo `(goal_hash, key_steps_hash, final_outcome)`.
+1. Run benchmark suites (synthetic + real-tool tasks) with matrix coverage.
+2. Collect traces using both fixed seeds and random seeds.
+3. Keep raw traces immutable (append-only, no in-place edits).
 
-### Giai đoạn D: Export
-1. Export role-specific SFT sets.
-2. Sinh preference data cho Verifier (và một phần Planner).
-3. Split train/val/test theo `goal family` để tránh leakage.
+## Phase C: Curation
 
-## 4) Kế hoạch tuning theo role
+1. Apply redaction and PII scanning.
+2. Run quality checks (missing keys, broken lineage, schema drift).
+3. Deduplicate with tuple fingerprinting:
+- `(goal_hash, key_steps_hash, final_outcome)`.
 
-### 4.1 Planner
-- SFT: học decomposition + ordering quality.
-- Preference: ưu tiên plan có completion rate cao và ít replan loop.
+## Phase D: Export
+
+1. Export role-specific SFT datasets.
+2. Build preference data for Verifier (and selected Planner scenarios).
+3. Split train/validation/test by `goal family` to reduce leakage.
+
+## 4) Role-Specific Tuning Plan
+
+## 4.1 Planner
+
+- SFT objective: decomposition and ordering quality.
+- Preference objective: favor plans with high completion rate and low replan loops.
 - Metrics: plan validity rate, replan rate, downstream success uplift.
 
-### 4.2 Worker
-- SFT: action selection + tool argument grounding.
-- Preference: ưu tiên trajectories phục hồi lỗi tốt.
+## 4.2 Worker
+
+- SFT objective: action selection and argument grounding.
+- Preference objective: prioritize strong failure-recovery trajectories.
 - Metrics: tool success rate, action efficiency, error recurrence.
 
-### 4.3 Verifier
-- SFT: quyết định stop/continue/replan có căn cứ.
-- Preference/Reward: so verdict với outcome ex-post.
+## 4.3 Verifier
+
+- SFT objective: grounded `stop/continue/replan` decisions.
+- Preference/reward objective: align verdicts with ex-post outcomes.
 - Metrics: stop precision/recall, false-stop rate, unnecessary-replan rate.
 
-## 5) Đánh giá và acceptance criteria
+## 5) Acceptance Criteria
 
-1. 100% run có `session.json` + `events.jsonl` hợp lệ schema.
-2. >= 98% events có lineage hợp lệ (`parent_event_id` hoặc root marker).
-3. Sinh được đủ 5 dataset views không lỗi parse.
-4. Datasets có report chất lượng: leakage, dedup, class balance.
-5. Tuning loop có dashboard metric theo từng role.
+1. 100% of runs produce schema-valid `session.json` and `events.jsonl`.
+2. At least 98% of events have valid lineage (`parent_event_id` or root marker).
+3. All five derived dataset views export without parse errors.
+4. Dataset reports include leakage, deduplication, and class-balance checks.
+5. Tuning loops publish role-specific dashboards and summary metrics.
 
-## 6) Milestone thực thi (2 tuần)
+## 6) Two-Week Execution Milestones
 
-- Ngày 1-2: chốt schema v2 + cập nhật emitters.
-- Ngày 3-5: batch collection + quality checks v1.
-- Ngày 6-8: exporter role-specific + preference builder.
-- Ngày 9-11: baseline tuning (planner/worker/verifier).
-- Ngày 12-14: ablation + báo cáo kết quả.
+- Day 1-2: finalize schema v2 and update emitters.
+- Day 3-5: run batch collection and quality checks (v1).
+- Day 6-8: implement role-specific exporter and preference builder.
+- Day 9-11: run baseline tuning for planner/worker/verifier.
+- Day 12-14: run ablations and publish technical report.
 
-## 7) Rủi ro chính và giảm thiểu
+## 7) Key Risks and Mitigation
 
-1. Drift prompt/config làm dữ liệu không đồng nhất:
-- Gắn `config_hash`, `prompt_hash`, `toolset_hash` cho mỗi run.
+1. Prompt/config drift causes heterogeneous data.
+- Mitigation: attach `config_hash`, `prompt_hash`, and `toolset_hash` per run.
 
-2. Lộ dữ liệu nhạy cảm:
-- Redaction ở collector và post-processing (double pass).
+2. Sensitive data leakage in traces.
+- Mitigation: enforce redaction during collection and post-processing (double pass).
 
-3. Mất cân bằng class (verifier mostly continue):
-- Chủ động generate hard cases, inject failure scenarios.
+3. Class imbalance (verifier mostly `continue`).
+- Mitigation: generate hard cases and inject controlled failure scenarios.
 
-4. Overfit vào synthetic:
-- Trộn real tool traces + human-in-the-loop correction data.
+4. Overfitting to synthetic tasks.
+- Mitigation: mix real-tool traces with human-corrected trajectories.

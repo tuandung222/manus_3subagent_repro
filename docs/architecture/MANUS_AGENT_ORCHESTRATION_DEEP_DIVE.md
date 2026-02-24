@@ -1,31 +1,32 @@
 # Manus Agent Orchestration Deep Dive
 
-## 1. Mục tiêu tài liệu
+## 1) Document Purpose
 
-Tài liệu này phân tích chi tiết kiến trúc orchestration cho agent 3 vai trò:
+This document explains the orchestration architecture for a three-role agent runtime:
+
 - `Architect` (planner)
 - `Worker` (executor)
-- `Critic` (review/router)
+- `Critic` (verifier/router)
 
-Mục tiêu là runtime quyết định rõ ràng, có trace lineage đầy đủ để phục vụ training data.
+The design target is deterministic control flow and full trace lineage for downstream training data.
 
-## 2. Nguyên tắc kiến trúc
+## 2) Architectural Principles
 
-1. Deterministic routing trong code, không ẩn trong prompt.
-2. Role boundary typed bằng schema (Pydantic).
-3. Prompt và hyperparameters cấu hình ngoài code.
-4. Mỗi vòng lặp đều sinh trace event có `run_id`, `step`, `event_type`.
+1. Routing decisions are explicit in code, not hidden in prompts.
+2. Role boundaries are strongly typed with Pydantic schemas.
+3. Prompts and hyperparameters are externalized from runtime logic.
+4. Every loop emits trace events with `run_id`, `step`, and `event_type`.
 
-## 3. Thành phần chính
+## 3) Core Components
 
-- `agents/architect.py`: sinh plan steps.
-- `agents/worker.py`: thực thi từng step, gọi tool nếu cần.
-- `agents/critic.py`: quyết định `continue/replan/end`.
-- `graph/workflow.py`: wiring LangGraph nodes + routing.
-- `eval/runner.py`: nạp config, override, bootstrap run.
-- `tracing/*`: ghi `session.json` + `events.jsonl`.
+- `agents/architect.py`: generates plan steps.
+- `agents/worker.py`: executes one step and invokes tools when needed.
+- `agents/critic.py`: returns `continue`, `replan`, or `end` decisions.
+- `graph/workflow.py`: LangGraph node wiring and transition hooks.
+- `eval/runner.py`: runtime bootstrap, config loading, and CLI overrides.
+- `tracing/*`: writes `session.json` and `events.jsonl`.
 
-## 4. Luồng điều khiển
+## 4) Control Flow
 
 ```mermaid
 flowchart TD
@@ -37,9 +38,9 @@ flowchart TD
   C -->|"end"| E["Finalize Episode"]
 ```
 
-## 5. State machine (rút gọn)
+## 5) State Machine (Condensed)
 
-State chính (`ManusState`):
+Primary state (`ManusState`) fields:
 - `goal`, `observation`
 - `plan`, `current_step_idx`
 - `action_history`, `review_history`
@@ -47,63 +48,62 @@ State chính (`ManusState`):
 - `done`, `success`, `final_answer`
 - `decision`, `dynamic_replanning`, `use_cot`
 
-### Transition rules
+Transition rules:
+1. `Architect -> Worker` after a valid plan is produced.
+2. `Worker -> Critic` after each action/environment update.
+3. `Critic -> Worker` when `decision=continue`.
+4. `Critic -> Architect` when `decision=replan` and replanning is enabled.
+5. `Critic -> END` when `decision=end` or `done=True`.
 
-1. `Architect -> Worker`: luôn sau khi có plan mới.
-2. `Worker -> Critic`: sau mỗi action/env step.
-3. `Critic -> Worker` nếu `decision=continue`.
-4. `Critic -> Architect` nếu `decision=replan` và replanning bật.
-5. `Critic -> END` nếu `decision=end` hoặc `done=True`.
+## 6) Failure Model
 
-## 6. Failure model
+- If `step_count >= max_steps`, terminate with `success=False`.
+- If JSON parsing/API calls fail, emit `episode_error` and close the run as failed.
+- If worker execution context is invalid (for example, missing valid plan), route to replan or end based on runtime policy.
 
-- Nếu `step_count >= max_steps`: stop với `success=False`.
-- Nếu model parse lỗi/API lỗi: emit `episode_error`, close session `failed`.
-- Nếu worker không có plan hợp lệ: yêu cầu `replan` hoặc `end` theo runtime config.
+## 7) Tracing and Trajectory Lineage
 
-## 7. Tracing & trajectory lineage
-
-Mỗi run tạo:
+Each run emits:
 - `artifacts/traces/<run_id>/session.json`
 - `artifacts/traces/<run_id>/events.jsonl`
 
-Event quan trọng:
-- `architect_input/output`
-- `worker_input/output`
-- `critic_input/output`
+Key event types:
+- `architect_input`, `architect_output`
+- `worker_input`, `worker_output`
+- `critic_input`, `critic_output`
 - `llm_call`
 - `tool_call`
-- `episode_end` / `episode_error`
+- `episode_end`, `episode_error`
 
-SFT exporter sẽ map:
-- `llm_call` thành prompt-response records
-- role boundary `_input/_output` thành transition supervision records
+SFT exporter mapping strategy:
+- `llm_call` -> prompt/response training records
+- role-boundary events -> transition-supervision records
 
-## 8. Cơ chế cấu hình prompts/hyperparameters
+## 8) Prompt and Hyperparameter Controls
 
-### Prompt
+## Prompt controls
 
-- Prompt gốc: `configs/prompts/*.yaml`
-- Override prompt: `--prompt-override <file.yaml>`
-- Context variables: `--prompt-context <file.yaml>`
-- Custom directory: `--prompts-dir <path>`
+- Base prompts: `configs/prompts/*.yaml`
+- Prompt override file: `--prompt-override <file.yaml>`
+- Prompt context variables: `--prompt-context <file.yaml>`
+- Custom prompt directory: `--prompts-dir <path>`
 
-### Hyperparameters
+## Hyperparameter controls
 
 - Base model config: `configs/models.yaml`
-- File override: `--model-override <file.yaml>`
-- Quick CLI override theo role:
+- Model override file: `--model-override <file.yaml>`
+- CLI role overrides:
   - `--architect-model`, `--architect-temperature`, `--architect-top-p`, `--architect-max-completion-tokens`
-  - tương tự cho `worker`, `critic`
+  - equivalent flags for `worker` and `critic`
 
-## 9. Tại sao phù hợp Agent Architect / Data Scientist
+## 9) Why This Fits Agent Architects and Data Scientists
 
-- Architect: kiểm soát transition matrix rõ và kiểm chứng bằng unit tests.
-- Data Scientist: toàn bộ run có lineage dữ liệu để huấn luyện/đánh giá offline.
+- Agent Architects get explicit transition logic and testable router behavior.
+- Data Scientists get complete run lineage for offline curation, slicing, and evaluation.
 
-## 10. Hướng mở rộng khuyến nghị
+## 10) Recommended Extensions
 
-1. Thêm Planner memory store (episodic + semantic).
-2. Thêm Critic scoring (0-1) để phục vụ reward modeling.
-3. Thêm OTLP exporter cho trace backend tập trung.
-4. Bổ sung dataset checks (dedup, leakage, split integrity).
+1. Add Planner memory layers (episodic + semantic memory).
+2. Add Critic confidence scoring for reward-modeling workflows.
+3. Add OTLP export for centralized trace backends.
+4. Add dataset integrity checks (dedup, leakage, split validation).

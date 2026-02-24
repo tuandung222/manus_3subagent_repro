@@ -1,12 +1,13 @@
-# Kế Hoạch Cấu Trúc Mã Nguồn
+# Code Structure Plan
 
-## Mục tiêu
+## Objective
 
-Thiết kế source code linh hoạt cho hai nhóm:
-- Agent Architect: cần kiểm soát workflow/routing rõ ràng.
-- Data Scientist: cần trace/trajectory giàu tín hiệu để training.
+Define a code structure that remains practical for both:
 
-## Cấu trúc thư mục đề xuất
+- **Agent Architects** who need deterministic control flow and explicit routing.
+- **Data Scientists** who need clean role boundaries and high-signal trace data for training.
+
+## Proposed Repository Structure
 
 ```text
 manus_3subagent_repro/
@@ -46,26 +47,45 @@ manus_3subagent_repro/
       types.py
     prompts/
       templates.py
+      modes.py
     utils/
       llm.py
       io.py
       seeding.py
+  notebooks/education/
   tests/
   references/
   docs/
 ```
 
-## Mapping theo responsibility
+## Responsibility Mapping
 
-- `agents/`: logic từng subagent, độc lập vai trò.
-- `graph/`: orchestration cứng (deterministic), không ẩn trong prompt.
-- `core/`: schema/state dùng chung.
-- `utils/llm.py`: adapter OpenAI client + JSON parsing + retry + redaction.
-- `tracing/`: lifecycle trace run.
-- `training/`: chuyển trace thành dữ liệu trajectory.
+- `agents/`: role-specific logic for Planner, Worker, Verifier.
+- `graph/`: deterministic orchestration and transition policy.
+- `core/`: shared state schemas and runtime types.
+- `utils/llm.py`: OpenAI adapter, JSON parsing, retry, secret redaction.
+- `tracing/`: lifecycle telemetry and event persistence.
+- `training/`: trace-to-trajectory dataset construction.
+- `eval/`: runnable CLI and offline metrics entrypoints.
 
-## Mở rộng ngắn hạn
+## Design Constraints
 
-1. Thêm `tooling agents` chuyên biệt (browser, SQL, code-runner).
-2. Thêm `reward labeling` từ critic outputs.
-3. Tách `dataset_checks.py` để kiểm định leakage/dedup/split.
+1. Keep transition logic in code, not in prompts.
+2. Keep role I/O contracts strongly typed.
+3. Keep runtime config externalized and override-friendly.
+4. Keep trace schema stable and versioned.
+5. Keep every run reproducible through config and seed controls.
+
+## Short-Term Extension Plan
+
+1. Add specialized tooling agents (browser, SQL, code runner).
+2. Add reward-label generation from verifier outputs.
+3. Add `dataset_checks.py` for leakage, deduplication, and split integrity.
+4. Add benchmark harnesses for CodeAct vs ReAct ablation.
+
+## Acceptance Criteria
+
+- New contributors can map architecture responsibilities from the folder layout alone.
+- Each runtime subsystem has focused tests and clear ownership.
+- Dataset extraction logic is isolated from orchestration logic.
+- Prompt/model changes do not require source edits.

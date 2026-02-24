@@ -1,24 +1,31 @@
-# Manus AI Agent Reproduction (3 Subagents, CodeAct + ReAct)
+# Manus-Style Agent Reproduction (3 Subagents, CodeAct + ReAct)
 
-Repository này hiện thực một runtime agent theo hướng Manus-style với 3 vai trò rõ ràng:
+This repository implements a production-oriented reproduction of a Manus-inspired agent runtime with three explicit subagents:
+
 1. `Planner` (`ArchitectAgent`)
 2. `Worker` (`WorkerAgent`)
 3. `Verifier` (`CriticAgent`)
 
-Mục tiêu:
-- Cung cấp scaffold chạy được end-to-end với OpenAI client.
-- Hỗ trợ cả hai style `CodeAct` và `ReAct` trong cùng codebase.
-- Tạo trace/trajectory data có lineage để phục vụ tuning theo role.
+The project is built for two audiences:
+- **Agent Architects** who need deterministic orchestration, explicit routing, and strong runtime contracts.
+- **Data Scientists** who need trace lineage and role-specific trajectory datasets for supervised fine-tuning and evaluation.
 
-## Navigation
+## Objectives
+
+- Deliver an end-to-end runnable multi-agent runtime with OpenAI client integration.
+- Support both `CodeAct` and `ReAct` behavior profiles in one codebase.
+- Enable configurable prompts and model hyperparameters without code edits.
+- Produce high-quality trace data that can be exported into training trajectories.
+
+## Documentation Index
 
 - Docs home: [`docs/README.md`](docs/README.md)
 - Reading guide: [`docs/READING_GUIDE.md`](docs/READING_GUIDE.md)
 - Reproduction plan: [`docs/plans/REPRODUCTION_PLAN.md`](docs/plans/REPRODUCTION_PLAN.md)
 - Code structure plan: [`docs/plans/CODE_STRUCTURE_PLAN.md`](docs/plans/CODE_STRUCTURE_PLAN.md)
 - Tracing/data plan: [`docs/plans/TRAINING_DATA_TRACING_PLAN.md`](docs/plans/TRAINING_DATA_TRACING_PLAN.md)
-- Tracing tuning plan: [`docs/plans/TRAJECTORY_TRACING_TUNING_PLAN.md`](docs/plans/TRAJECTORY_TRACING_TUNING_PLAN.md)
-- Manus source + gap plan: [`docs/plans/MANUS_DOCUMENT_COLLECTION_AND_GAP_PLAN.md`](docs/plans/MANUS_DOCUMENT_COLLECTION_AND_GAP_PLAN.md)
+- Tracing implementation for tuning: [`docs/plans/TRAJECTORY_TRACING_TUNING_PLAN.md`](docs/plans/TRAJECTORY_TRACING_TUNING_PLAN.md)
+- Manus document collection + gap analysis plan: [`docs/plans/MANUS_DOCUMENT_COLLECTION_AND_GAP_PLAN.md`](docs/plans/MANUS_DOCUMENT_COLLECTION_AND_GAP_PLAN.md)
 - Notebook education plan: [`docs/plans/JUPYTER_NOTEBOOK_EDUCATION_PLAN.md`](docs/plans/JUPYTER_NOTEBOOK_EDUCATION_PLAN.md)
 - Architecture overview: [`docs/architecture/AGENT_FRAMEWORK_ARCHITECTURE.md`](docs/architecture/AGENT_FRAMEWORK_ARCHITECTURE.md)
 - CodeAct/ReAct design: [`docs/architecture/CODEACT_REACT_HYBRID_DESIGN.md`](docs/architecture/CODEACT_REACT_HYBRID_DESIGN.md)
@@ -27,126 +34,146 @@ Mục tiêu:
 - Education notebooks: [`notebooks/education/README.md`](notebooks/education/README.md)
 - Reference snapshots: [`references/README.md`](references/README.md)
 
-## Implemented Feature Inventory
+## Implemented Features
 
 ## 1) Runtime Architecture
 
-- Deterministic orchestration bằng `LangGraph` state machine.
-- 3 subagents có boundary typed (`Pydantic` schemas).
-- Explicit routing: `continue / replan / end` trong code, không ẩn trong prompt.
+- Deterministic orchestration via a `LangGraph` state machine.
+- Three subagents with typed role boundaries (`Pydantic` schemas).
+- Explicit routing decisions in code: `continue`, `replan`, `end`.
 
-Code:
+Primary source files:
 - Graph workflow: `src/manus_three_agent/graph/workflow.py`
-- Router transition: `src/manus_three_agent/graph/transitions.py`
-- Core state/types/schemas: `src/manus_three_agent/core/`
+- Router transitions: `src/manus_three_agent/graph/transitions.py`
+- Shared state/types/schemas: `src/manus_three_agent/core/`
 
-## 2) Hybrid Agentic Modes (`CodeAct` + `ReAct`)
+## 2) Hybrid Agentic Profiles (`CodeAct` + `ReAct`)
 
-- Một codebase chạy được cả:
-  - `codeact`: ưu tiên action/tool-grounded execution.
-  - `react`: ưu tiên thought-action-observation loop.
-- Mode được propagate xuyên suốt runtime/state/trace.
-- Prompt profile mặc định theo mode, vẫn cho phép user override thêm.
+- Single runtime supports:
+  - `codeact`: action-first and tool-grounded execution.
+  - `react`: thought-action-observation loop behavior.
+- `agentic_mode` is propagated through runtime state, prompts, and trace payloads.
+- Mode defaults can be overridden by user prompt files and context variables.
 
-Code:
-- Mode profile: `src/manus_three_agent/prompts/modes.py`
-- Runtime mode config: `src/manus_three_agent/core/types.py`
-- CLI mode override: `src/manus_three_agent/eval/runner.py`
+Primary source files:
+- Mode prompt profiles: `src/manus_three_agent/prompts/modes.py`
+- Runtime mode types: `src/manus_three_agent/core/types.py`
+- CLI override plumbing: `src/manus_three_agent/eval/runner.py`
 
-## 3) OpenAI Integration (Production Path)
+## 3) OpenAI Integration
 
-- Dùng `openai` Python SDK qua adapter riêng.
-- JSON-response parsing + retry (tenacity) + secret redaction.
-- Hỗ trợ `OPENAI_BASE_URL` cho endpoint compatible.
+- Uses official `openai` Python SDK through a dedicated adapter.
+- Structured JSON parsing with retry (`tenacity`) and redaction support.
+- Supports `OPENAI_BASE_URL` for OpenAI-compatible endpoints.
 
-Code:
-- LLM client wrapper: `src/manus_three_agent/utils/llm.py`
+Primary source file:
+- LLM wrapper: `src/manus_three_agent/utils/llm.py`
 
-## 4) Prompt Configuration Flexibility
+## 4) Prompt Configuration
 
-- Base prompts theo role: `configs/prompts/*.yaml`
-- Override prompt theo file YAML: `--prompt-override`
-- Shared context variables: `--prompt-context`
-- Chỉ định prompt dir tùy ý: `--prompts-dir`
-- Merge precedence rõ: mode defaults -> prompt override -> prompt context
+- Role prompts are defined in `configs/prompts/*.yaml`.
+- Runtime supports:
+  - `--prompt-override` for custom prompt templates.
+  - `--prompt-context` for shared context variables.
+  - `--prompts-dir` for custom prompt directory resolution.
+- Merge precedence is explicit and stable:
+  1. Mode profile defaults
+  2. Prompt override file
+  3. Prompt context variables
 
-Files:
-- Base prompts: `configs/prompts/architect.yaml`, `worker.yaml`, `critic.yaml`
-- Example override: `configs/prompt_overrides.example.yaml`
-- Example context: `configs/prompt_context.example.yaml`
+Config examples:
+- Prompt overrides: `configs/prompt_overrides.example.yaml`
+- Prompt context: `configs/prompt_context.example.yaml`
 
-## 5) Hyperparameter Configuration Flexibility
+## 5) Hyperparameter Configuration
 
-- Base model config cho từng role trong `configs/models.yaml`
-- Override theo file: `--model-override`
-- Quick CLI override per-role:
-  - model
-  - temperature
-  - top_p
-  - max_completion_tokens
-- Support thêm `frequency_penalty`, `presence_penalty`, `timeout_seconds`, `extra_params`
+- Base model stack by role in `configs/models.yaml`.
+- Supports both file-level and CLI-level overrides.
+- Role-specific CLI controls include:
+  - `model`
+  - `temperature`
+  - `top_p`
+  - `max_completion_tokens`
+- Advanced fields supported:
+  - `frequency_penalty`
+  - `presence_penalty`
+  - `timeout_seconds`
+  - `extra_params`
 
-Files:
-- Base: `configs/models.yaml`
-- Example override: `configs/model_overrides.example.yaml`
+Config example:
+- `configs/model_overrides.example.yaml`
 
 ## 6) Tooling Layer
 
-- Tool registry mở rộng được.
+- Extensible tool registry abstraction.
 - Built-in tools:
   - `calculator`
   - `fetch_url`
-- Notebook demo có thêm `wiki_search` + `wiki_summary`.
+- Notebook demonstrations include:
+  - `wiki_search`
+  - `wiki_summary`
 
-Code:
-- Registry: `src/manus_three_agent/tools/base.py`
+Primary source files:
+- Registry contracts: `src/manus_three_agent/tools/base.py`
 - Built-ins: `src/manus_three_agent/tools/builtin.py`
 
 ## 7) Tracing and Trajectory Data
 
-- Mỗi run có thể ghi:
-  - `session.json`
-  - `events.jsonl`
-- Có đầy đủ role boundary events (`planner/worker/verifier`) và lifecycle events.
-- Export trace -> training trajectory JSONL.
+Each run can produce:
+- `session.json`
+- `events.jsonl`
 
-Code:
-- Tracing infra: `src/manus_three_agent/tracing/`
-- Exporter: `src/manus_three_agent/training/build_sft_data.py`
+Trace stream includes:
+- Role boundary events (`planner/worker/verifier` input/output)
+- LLM/tool telemetry
+- Episode lifecycle events (`episode_end`, `episode_error`)
+
+Training export:
+- `trace -> trajectory JSONL` conversion is implemented for SFT workflows.
+
+Primary source files:
+- Tracing subsystem: `src/manus_three_agent/tracing/`
+- SFT exporter: `src/manus_three_agent/training/build_sft_data.py`
 
 ## 8) Evaluation CLI
 
-- `run-episode`: chạy một episode với full config override.
-- `build-trajectories`: build dataset từ traces.
-- `print-effective-config`: in merged runtime/model/prompt config để audit.
+Commands:
+- `run-episode`: execute one episode with full runtime overrides.
+- `build-trajectories`: convert traces into training datasets.
+- `print-effective-config`: inspect merged runtime/model/prompt configuration.
 
-Code:
-- CLI runner: `src/manus_three_agent/eval/runner.py`
+CLI entrypoint:
+- `src/manus_three_agent/eval/runner.py`
 
-## 9) Education Notebooks (Runnable)
+## 9) Education Notebooks
 
-Đã build 3 notebook chi tiết, chạy được:
+Three runnable notebooks are included:
+
 1. `01_inspect_planner_worker_verifier_io.ipynb`
-- Inspect input/output của planner, worker, verifier.
+- Inspects role contracts for planner, worker, verifier.
+- Compares behavior between `codeact` and `react`.
 
 2. `02_orchestration_loop_live.ipynb`
-- Hiện thực orchestration loop trực tiếp trong notebook.
-- So sánh loop thủ công với LangGraph workflow.
+- Implements a manual orchestration loop in notebook cells.
+- Compares manual transitions against the production LangGraph workflow.
 
 3. `03_tool_use_search_summary_agentic_task.ipynb`
-- Demo tool-use từ search -> summary cho agentic task.
-- Có verifier review và tool trace.
+- Demonstrates a realistic tool-use pipeline (`search -> summarize`).
+- Includes verifier gating and tool trace visibility.
 
-Kèm smoke runner:
+Notebook smoke scripts:
 - `scripts/execute_notebook_cells.py`
 - `scripts/run_education_notebooks.sh`
 
-## 10) Tests and Quality Gates
+## 10) Test Coverage and Quality Gates
 
-- Unit tests cho config flexibility, tracing, training export, workflow mock run.
-- Notebook smoke execution script để đảm bảo các code cells chạy được.
+Implemented tests cover:
+- Mock orchestration behavior
+- Tracing infrastructure
+- Training export paths
+- Configuration flexibility
 
-Tests:
+Representative tests:
 - `tests/test_mock_workflow.py`
 - `tests/test_tracing_infra.py`
 - `tests/test_training_export.py`
@@ -154,38 +181,38 @@ Tests:
 
 ## Quick Start
 
-1. Install
+1. Install dependencies
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
 ```
 
-2. Environment
+2. Configure environment
 ```bash
 cp .env.example .env
 # set OPENAI_API_KEY in .env
 ```
 
-3. Run episode (mock)
+3. Run mock episode
 ```bash
 manus3-run run-episode --goal "Build an agent evaluation checklist" --mock
 ```
 
-4. Run episode (CodeAct)
+4. Run CodeAct mode
 ```bash
 manus3-run run-episode --goal "Evaluate planning quality" --agentic-mode codeact --trace
 ```
 
-5. Run episode (ReAct)
+5. Run ReAct mode
 ```bash
 manus3-run run-episode --goal "Evaluate planning quality" --agentic-mode react --trace
 ```
 
-6. Run with model/prompt overrides
+6. Run with prompt/model overrides
 ```bash
 manus3-run run-episode \
-  --goal "Design benchmark for planner" \
+  --goal "Design a benchmark for planner reliability" \
   --agentic-mode codeact \
   --model-override configs/model_overrides.example.yaml \
   --prompt-override configs/prompt_overrides.example.yaml \
@@ -199,7 +226,7 @@ manus3-run run-episode \
 manus3-run build-trajectories --trace-dir artifacts/traces --output data/processed/trajectory_sft.jsonl
 ```
 
-8. Run education notebook smoke test
+8. Run notebook smoke test
 ```bash
 ./scripts/run_education_notebooks.sh
 ```
@@ -219,13 +246,13 @@ manus_3subagent_repro/
 
 ## Security Notes
 
-- `.env` được ignore bởi git.
-- Không commit API keys/secrets.
-- LLM tracing có redaction cho OpenAI key patterns.
+- `.env` is ignored by git.
+- Do not commit API keys or secrets.
+- LLM tracing includes OpenAI-style key redaction patterns.
 
-## Reference Collection
+## Reference Refresh
 
-Refresh reference snapshots:
+To refresh reference snapshots:
 ```bash
 ./scripts/download_references.sh
 ```

@@ -1,13 +1,15 @@
-# Manus Planner (Architect) - Pseudocode and Design Notes
+# Manus Planner (Architect) Pseudocode and Design Notes
 
-## 1. Vai trò Planner
+## 1) Planner Responsibilities
 
-Planner (`ArchitectAgent`) chịu trách nhiệm:
-1. Phân rã goal thành `steps` hữu hạn.
-2. Đảm bảo step đủ cụ thể cho Worker.
-3. Hỗ trợ replanning khi Critic yêu cầu.
+The Planner (`ArchitectAgent`) is responsible for:
 
-Contract output:
+1. Decomposing a goal into finite, executable steps.
+2. Producing steps with enough specificity for Worker execution.
+3. Regenerating plans when the Verifier requests replanning.
+
+Expected output contract:
+
 ```json
 {
   "steps": [
@@ -16,16 +18,16 @@ Contract output:
 }
 ```
 
-## 2. Input contract
+## 2) Input Contract
 
-Planner nhận:
+Planner input includes:
 - `goal`
-- `observation` (state mới nhất từ environment)
-- `action_history` (những gì worker đã làm)
-- `use_cot` (gợi ý reasoning depth)
-- `step` (index để trace)
+- `observation` (latest environment state snapshot)
+- `action_history` (what the worker already attempted)
+- `use_cot` (reasoning-depth hint)
+- `step` (trace step index)
 
-## 3. Planner inference pseudocode
+## 3) Planner Inference Pseudocode
 
 ```text
 FUNCTION PLAN(goal, observation, action_history, use_cot, step):
@@ -56,7 +58,7 @@ FUNCTION PLAN(goal, observation, action_history, use_cot, step):
   RETURN PlanOutput(steps)
 ```
 
-## 4. Replanning pseudocode
+## 4) Replanning Pseudocode
 
 ```text
 FUNCTION REPLAN_IF_NEEDED(state):
@@ -77,32 +79,39 @@ FUNCTION REPLAN_IF_NEEDED(state):
   RETURN state.plan
 ```
 
-## 5. Planner quality heuristics (đề xuất)
+## 5) Planner Quality Heuristics
 
-1. `Step granularity`: mỗi step nên có mục tiêu quan sát được.
-2. `Dependency ordering`: step sau chỉ phụ thuộc output step trước.
-3. `Termination readiness`: plan phải có đường dẫn ra final answer.
-4. `Fallback readiness`: nếu tool fail, có nhánh thay thế.
+1. `Step granularity`: each step should have observable completion criteria.
+2. `Dependency ordering`: later steps should depend only on prior outputs.
+3. `Termination readiness`: plan must contain a clear path to final answer synthesis.
+4. `Fallback readiness`: plan should include alternatives when tools fail.
 
-## 6. Planner-specific tracing
+## 6) Planner-Specific Tracing Requirements
 
-Nên log ít nhất:
-- `architect_input`:
-  - goal, observation summary, action_history_len
-- `llm_call`:
-  - model, generation_config, prompts, parsed_output
-- `architect_output`:
-  - step_count và list steps
+At minimum, trace:
+- `architect_input`
+  - goal
+  - observation summary
+  - action history length
+- `llm_call`
+  - model
+  - generation config
+  - prompts
+  - parsed output
+- `architect_output`
+  - step count
+  - full step list
 
-## 7. Prompting strategy cho Planner
+## 7) Prompting Strategy for Planner
 
-Prompt nên chứa:
-1. Mục tiêu cuối cùng và ràng buộc.
-2. State hiện tại ngắn gọn.
-3. Output schema cứng (strict JSON).
-4. Tiêu chí đánh giá step tốt (cụ thể, đo được, tuần tự).
+Planner prompts should include:
+1. Final objective and constraints.
+2. Condensed current state.
+3. Strict output schema (JSON only).
+4. Step-quality criteria (specific, measurable, sequential).
 
-Ví dụ skeleton:
+Example skeleton:
+
 ```text
 System: You are ArchitectAgent. Output strict JSON only.
 User:
@@ -112,8 +121,8 @@ User:
   Return JSON: {"steps": [{"title":..., "rationale":...}]}
 ```
 
-## 8. Failure handling cho Planner
+## 8) Failure Handling Strategy
 
-- JSON parse fail: retry (tenacity) và log parse_error.
-- Schema fail: reject output, fallback mock plan hoặc trigger replan.
-- Hallucinated step: Critic phát hiện mismatch và route về replanning.
+- JSON parse failure: retry with `tenacity` and log parse error metadata.
+- Schema validation failure: reject output, fallback to safe mock plan, or trigger replan.
+- Hallucinated or non-executable steps: detected by Verifier and routed back to replanning.

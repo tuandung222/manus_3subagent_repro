@@ -1,51 +1,70 @@
 # CodeAct + ReAct Hybrid Design
 
-## Mục tiêu
+## Objective
 
-Một codebase duy nhất chạy được cả hai phong cách:
-- `CodeAct`: ưu tiên hành động thực thi và tool-grounded execution.
-- `ReAct`: ưu tiên loop suy luận - hành động - quan sát.
+This project intentionally supports two distinct agent behavior profiles in the same runtime:
 
-## Cách bật mode
+- `CodeAct`: action-forward, tool-grounded execution style.
+- `ReAct`: thought-action-observation loop style.
+
+The design goal is to enable controlled benchmarking and training-data collection across both behaviors without forking architecture.
+
+## How to Enable a Mode
 
 - CLI flag: `--agentic-mode codeact|react`
 - Runtime config: `configs/base.yaml -> agentic_mode`
 
-CLI override luôn có ưu tiên cao hơn file config.
+CLI options always take precedence over static configuration files.
 
-## Wiring trong mã nguồn
+## Source Wiring
 
-- Runtime mode: `core/types.py` (`RuntimeConfig.agentic_mode`)
+Mode is propagated through all critical boundaries:
+
+- Runtime configuration: `core/types.py` (`RuntimeConfig.agentic_mode`)
 - State propagation: `core/state.py` (`ManusState.agentic_mode`)
-- Prompt profile theo mode: `prompts/modes.py`
-- Planner/Worker/Verifier mode-aware:
+- Prompt defaults by mode: `prompts/modes.py`
+- Role agents (mode-aware):
   - `agents/architect.py`
   - `agents/worker.py`
   - `agents/critic.py`
-- Orchestration trace payload mang `agentic_mode`: `graph/workflow.py`
+- Trace payload propagation: `graph/workflow.py`
 
-## Hành vi hiện tại theo mode
+## Current Runtime Behavior by Mode
 
-### CodeAct
-- Prompt profile hướng tới action/tool concretization.
-- Mock worker có tool request minh họa ở bước đầu.
-- Thích hợp benchmark về tool-use reliability.
+## `codeact`
 
-### ReAct
-- Prompt profile hướng tới thought-action-observation loop.
-- Mock planner/worker đổi style summary theo ReAct.
-- Thích hợp benchmark về iterative reasoning control.
+- Prompt profile emphasizes concrete tool decisions and action execution.
+- Mock worker demonstrates tool requests early in the episode.
+- Best used when evaluating tool reliability and execution grounding.
 
-## Prompt precedence
+## `react`
 
-1. Mode prompt profile (mặc định theo `agentic_mode`)
-2. User `--prompt-override`
-3. User `--prompt-context`
+- Prompt profile emphasizes iterative reasoning summaries between actions.
+- Mock planner/worker produce response style aligned with ReAct loops.
+- Best used when evaluating iterative planning and reasoning control.
 
-=> Cho phép vừa giữ behavior mặc định theo mode, vừa custom sâu theo use case.
+## Prompt Resolution Precedence
 
-## Khuyến nghị tuning
+Prompt composition is deterministic and auditable:
 
-- Tune Planner riêng cho từng mode để tránh trộn tín hiệu decomposition.
-- Worker dataset nên split theo mode vì khác distribution tool usage.
-- Verifier (Critic) nên học thêm feature `agentic_mode` để tránh bias routing.
+1. Mode prompt profile defaults (from `agentic_mode`)
+2. User prompt override (`--prompt-override`)
+3. User prompt context variables (`--prompt-context`)
+
+This layering preserves stable defaults while still allowing deep customization.
+
+## Recommended Tuning Strategy
+
+- Train Planner separately per mode to avoid decomposition-signal mixing.
+- Split Worker datasets by mode due to different tool-usage distributions.
+- Include `agentic_mode` as an input feature for Verifier training to reduce routing bias.
+
+## Evaluation Recommendations
+
+- Keep the same benchmark tasks across modes for fair comparison.
+- Record `agentic_mode` in every trace event for clean ablation analysis.
+- Report at least:
+  - task success rate
+  - average steps to completion
+  - replan frequency
+  - tool-call success ratio
