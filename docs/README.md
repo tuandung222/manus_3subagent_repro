@@ -7,6 +7,7 @@
 - Tracing implementation for tuning: [`plans/TRAJECTORY_TRACING_TUNING_PLAN.md`](plans/TRAJECTORY_TRACING_TUNING_PLAN.md)
 - Manus document collection + gap plan: [`plans/MANUS_DOCUMENT_COLLECTION_AND_GAP_PLAN.md`](plans/MANUS_DOCUMENT_COLLECTION_AND_GAP_PLAN.md)
 - Notebook education plan: [`plans/JUPYTER_NOTEBOOK_EDUCATION_PLAN.md`](plans/JUPYTER_NOTEBOOK_EDUCATION_PLAN.md)
+- Notebook artifacts: [`../notebooks/education/README.md`](../notebooks/education/README.md)
 - Architecture: [`architecture/AGENT_FRAMEWORK_ARCHITECTURE.md`](architecture/AGENT_FRAMEWORK_ARCHITECTURE.md)
 - CodeAct + ReAct hybrid design: [`architecture/CODEACT_REACT_HYBRID_DESIGN.md`](architecture/CODEACT_REACT_HYBRID_DESIGN.md)
 - Orchestration deep dive: [`architecture/MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md`](architecture/MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md)

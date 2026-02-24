@@ -20,6 +20,9 @@
 5. Review notebook education roadmap:
 - [`plans/JUPYTER_NOTEBOOK_EDUCATION_PLAN.md`](plans/JUPYTER_NOTEBOOK_EDUCATION_PLAN.md)
 
-6. Inspect downloaded references:
+6. Run education notebooks:
+- [`../notebooks/education/README.md`](../notebooks/education/README.md)
+
+7. Inspect downloaded references:
 - [`../references/README.md`](../references/README.md)
 - [`../references/REFERENCE_SOURCES.csv`](../references/REFERENCE_SOURCES.csv)
