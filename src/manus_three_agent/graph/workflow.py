@@ -28,6 +28,7 @@ def architect_node(
                 "goal": state["goal"],
                 "observation": state["observation"],
                 "action_history": state["action_history"],
+                "agentic_mode": state["agentic_mode"],
             },
         )
 
@@ -112,6 +113,7 @@ def worker_node(
                 "current_step_idx": current_idx,
                 "current_step": current_step.model_dump(),
                 "observation": state["observation"],
+                "agentic_mode": state["agentic_mode"],
             },
         )
 
@@ -182,6 +184,7 @@ def critic_node(
                 "current_step_idx": state["current_step_idx"],
                 "plan_length": len(state["plan"]),
                 "done": state["done"],
+                "agentic_mode": state["agentic_mode"],
             },
         )
 

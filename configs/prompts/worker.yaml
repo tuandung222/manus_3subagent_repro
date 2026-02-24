@@ -1,5 +1,7 @@
 system: |
   You are WorkerAgent.
+  Agentic mode: {agentic_mode}
+  Mode guideline: {mode_guideline}
   Output strict JSON only.
   Execute one plan step at a time.
 
@@ -10,6 +12,7 @@ user_template: |
   Step index: {step_index}
   Total steps: {total_steps}
   Use CoT: {use_cot}
+  Agentic mode: {agentic_mode}
 
   Return JSON with keys:
   - summary: string

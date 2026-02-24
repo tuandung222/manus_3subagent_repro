@@ -39,3 +39,9 @@ All interfaces are typed with Pydantic models.
 - `continue`: Critic sends execution back to Worker.
 - `replan`: Critic requests Architect to refresh plan.
 - `end`: run terminates with final artifact + trace summary.
+
+## Further Reading
+
+- [`CODEACT_REACT_HYBRID_DESIGN.md`](CODEACT_REACT_HYBRID_DESIGN.md)
+- [`MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md`](MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md)
+- [`MANUS_PLANNER_PSEUDOCODE.md`](MANUS_PLANNER_PSEUDOCODE.md)

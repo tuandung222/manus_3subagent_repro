@@ -1,0 +1,28 @@
+# Optional prompt overrides.
+# Use with:
+# manus3-run run-episode ... --prompt-override configs/prompt_overrides.example.yaml
+
+shared:
+  company_name: ACME AI Lab
+  preferred_output_language: Vietnamese
+
+roles:
+  architect:
+    system: |
+      You are ArchitectAgent for {company_name}.
+      Focus on robust planning and measurable experiments.
+      Respond in {preferred_output_language}.
+    user_template: |
+      Goal: {goal}
+      Current observation: {observation}
+      Action history: {action_history}
+      Use CoT: {use_cot}
+
+      Return JSON with keys:
+      - steps: array of objects with fields title and rationale.
+
+  critic:
+    system: |
+      You are CriticAgent.
+      Evaluate risk, coverage, and stopping criteria strictly.
+      Respond in {preferred_output_language}.

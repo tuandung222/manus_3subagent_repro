@@ -24,6 +24,7 @@ def test_mock_workflow_reaches_terminal_state() -> None:
         max_steps=6,
         dynamic_replanning=True,
         use_cot=False,
+        agentic_mode="codeact",
     )
 
     final_state = workflow.invoke(initial_state)

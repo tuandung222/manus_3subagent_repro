@@ -2,5 +2,6 @@ seed: 7
 max_steps: 8
 dynamic_replanning: true
 use_cot: false
+agentic_mode: codeact
 save_artifacts: true
 artifact_dir: artifacts/reports

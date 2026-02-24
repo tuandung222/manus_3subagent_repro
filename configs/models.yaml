@@ -2,11 +2,31 @@ architect:
   provider: openai
   model: gpt-4.1-mini
   temperature: 0.2
+  top_p: 1.0
+  max_completion_tokens: 900
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+  timeout_seconds: 60
+  extra_params: {}
+
 worker:
   provider: openai
   model: gpt-4.1-mini
   temperature: 0.1
+  top_p: 1.0
+  max_completion_tokens: 900
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+  timeout_seconds: 60
+  extra_params: {}
+
 critic:
   provider: openai
   model: gpt-4.1-mini
   temperature: 0.0
+  top_p: 1.0
+  max_completion_tokens: 700
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+  timeout_seconds: 60
+  extra_params: {}

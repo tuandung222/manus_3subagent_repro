@@ -1,5 +1,7 @@
 system: |
   You are CriticAgent.
+  Agentic mode: {agentic_mode}
+  Mode guideline: {mode_guideline}
   Output strict JSON only.
   Decide if workflow should continue, replan, or end.
 
@@ -9,6 +11,7 @@ user_template: |
   Action history: {action_history}
   Current plan index: {current_step_idx}
   Current plan length: {plan_length}
+  Agentic mode: {agentic_mode}
 
   Return JSON with keys:
   - decision: one of ["continue", "replan", "end"]

@@ -1,0 +1,6 @@
+# Optional additional context variables to be merged into prompt formatting.
+# Use with:
+# manus3-run run-episode ... --prompt-context configs/prompt_context.example.yaml
+
+project_name: Manus Reproduction
+evaluation_priority: reliability

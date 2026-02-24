@@ -40,7 +40,7 @@ class LLMClient:
         model: str,
         system_prompt: str,
         user_prompt: str,
-        temperature: float,
+        generation_config: dict[str, Any] | None = None,
         trace_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not self.enabled:
@@ -58,12 +58,17 @@ class LLMClient:
         used_response_format = True
         status = "success"
         error = ""
+        request_generation_config = {
+            k: v
+            for k, v in (generation_config or {}).items()
+            if v is not None and k not in {"model", "messages", "response_format"}
+        }
 
         def _request(*, with_response_format: bool) -> tuple[str, dict[str, int]]:
             request_kwargs: dict[str, Any] = {
                 "model": model,
-                "temperature": temperature,
                 "messages": messages,
+                **request_generation_config,
             }
             if with_response_format:
                 request_kwargs["response_format"] = {"type": "json_object"}
@@ -97,7 +102,7 @@ class LLMClient:
                     "status": status,
                     "error": error,
                     "model": model,
-                    "temperature": temperature,
+                    "generation_config": request_generation_config,
                     "used_response_format_json_object": used_response_format,
                     "latency_ms": round((time.perf_counter() - start_time) * 1000, 3),
                     "usage": usage,

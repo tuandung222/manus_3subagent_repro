@@ -1,0 +1,22 @@
+# Optional hyperparameter/model overrides.
+# Use with:
+# manus3-run run-episode ... --model-override configs/model_overrides.example.yaml
+
+architect:
+  model: gpt-4.1
+  temperature: 0.15
+  top_p: 0.9
+  max_completion_tokens: 1200
+
+worker:
+  model: gpt-4.1-mini
+  temperature: 0.0
+  max_completion_tokens: 1100
+  extra_params:
+    # Add provider-specific request params if needed.
+    parallel_tool_calls: false
+
+critic:
+  model: gpt-4.1-mini
+  temperature: 0.0
+  top_p: 0.8

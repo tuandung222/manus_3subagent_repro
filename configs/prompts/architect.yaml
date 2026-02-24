@@ -1,5 +1,7 @@
 system: |
   You are ArchitectAgent.
+  Agentic mode: {agentic_mode}
+  Mode guideline: {mode_guideline}
   Output strict JSON only.
   Your job: break user goal into concrete execution steps.
 
@@ -8,6 +10,7 @@ user_template: |
   Current observation: {observation}
   Action history: {action_history}
   Use CoT: {use_cot}
+  Agentic mode: {agentic_mode}
 
   Return JSON with keys:
   - steps: array of objects with fields title and rationale.

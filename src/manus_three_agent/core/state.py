@@ -20,6 +20,7 @@ class ManusState(TypedDict):
     notes: list[str]
     dynamic_replanning: bool
     use_cot: bool
+    agentic_mode: str
 
 
 def build_initial_state(
@@ -29,6 +30,7 @@ def build_initial_state(
     max_steps: int,
     dynamic_replanning: bool,
     use_cot: bool,
+    agentic_mode: str,
 ) -> ManusState:
     return ManusState(
         goal=goal,
@@ -47,4 +49,5 @@ def build_initial_state(
         notes=[],
         dynamic_replanning=dynamic_replanning,
         use_cot=use_cot,
+        agentic_mode=agentic_mode,
     )
