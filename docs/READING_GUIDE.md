@@ -10,6 +10,8 @@ Use this guide to navigate documentation based on your objective.
 ## 2) Understand Architecture and Framework Choices
 
 - [`architecture/AGENT_FRAMEWORK_ARCHITECTURE.md`](architecture/AGENT_FRAMEWORK_ARCHITECTURE.md)
+- [`architecture/MANUS_AGENT_DESIGN_PRINCIPLES.md`](architecture/MANUS_AGENT_DESIGN_PRINCIPLES.md)
+- [`architecture/CODEBASE_READING_ROADMAP.md`](architecture/CODEBASE_READING_ROADMAP.md)
 - [`architecture/CODEACT_REACT_HYBRID_DESIGN.md`](architecture/CODEACT_REACT_HYBRID_DESIGN.md)
 - [`architecture/MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md`](architecture/MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md)
 - [`architecture/MANUS_PLANNER_PSEUDOCODE.md`](architecture/MANUS_PLANNER_PSEUDOCODE.md)

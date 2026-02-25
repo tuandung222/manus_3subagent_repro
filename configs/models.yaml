@@ -1,6 +1,6 @@
 architect:
-  provider: openai
-  model: gpt-4.1-mini
+  provider: huggingface
+  model: moonshotai/Kimi-K2.5
   temperature: 0.2
   top_p: 1.0
   max_completion_tokens: 900
@@ -10,8 +10,8 @@ architect:
   extra_params: {}
 
 worker:
-  provider: openai
-  model: gpt-4.1-mini
+  provider: huggingface
+  model: moonshotai/Kimi-K2.5
   temperature: 0.1
   top_p: 1.0
   max_completion_tokens: 900
@@ -21,8 +21,8 @@ worker:
   extra_params: {}
 
 critic:
-  provider: openai
-  model: gpt-4.1-mini
+  provider: huggingface
+  model: moonshotai/Kimi-K2.5
   temperature: 0.0
   top_p: 1.0
   max_completion_tokens: 700

@@ -1,5 +1,12 @@
 # Manus-Style Agent Reproduction (3 Subagents, CodeAct + ReAct)
 
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Orchestration](https://img.shields.io/badge/Orchestration-LangGraph-1F6FEB)
+![Provider](https://img.shields.io/badge/Provider-HF%20Inference%20(default)-f97316)
+![API](https://img.shields.io/badge/API-OpenAI%20compatible-412991)
+![Tests](https://img.shields.io/badge/pytest-13%20passed-brightgreen)
+![Notebook Smoke](https://img.shields.io/badge/notebooks-3%2F3%20smoke%20pass-success)
+
 This repository implements a production-oriented reproduction of a Manus-inspired agent runtime with three explicit subagents:
 
 1. `Planner` (`ArchitectAgent`)
@@ -17,6 +24,52 @@ The project is built for two audiences:
 - Enable configurable prompts and model hyperparameters without code edits.
 - Produce high-quality trace data that can be exported into training trajectories.
 
+## Source Code Reading Quickstart
+
+If you are new to this repository and want the fastest route:
+
+1. Entrypoint: `pyproject.toml` (`manus3-run`) -> `src/manus_three_agent/eval/runner.py` (`run_episode`)
+2. Orchestration loop: `src/manus_three_agent/graph/workflow.py`
+3. Routing policy: `src/manus_three_agent/graph/transitions.py`
+4. Role loops: `src/manus_three_agent/agents/architect.py`, `worker.py`, `critic.py`
+5. State/contracts: `src/manus_three_agent/core/state.py`, `schemas.py`, `types.py`
+6. Tracing and training export: `src/manus_three_agent/tracing/`, `src/manus_three_agent/training/build_sft_data.py`
+
+Detailed guide:
+- [`docs/architecture/CODEBASE_READING_ROADMAP.md`](docs/architecture/CODEBASE_READING_ROADMAP.md)
+
+## Implementation Workflow (How the Codebase Was Built)
+
+The implementation follows a clear engineering workflow from architecture to validation:
+
+1. Scope and architecture definition
+- Defined a Manus-style role split: `Planner` -> `Worker` -> `Verifier`.
+- Locked deterministic routing in code (`continue/replan/end`) using `LangGraph`.
+
+2. Contract-first runtime implementation
+- Implemented typed interfaces and runtime state with `Pydantic`.
+- Added modular role agents, environment adapters, and tool registry.
+
+3. OpenAI integration and execution modes
+- Integrated official OpenAI client adapter with retry, JSON parsing, and redaction.
+- Added dual behavior profiles: `CodeAct` and `ReAct`.
+
+4. Configurability for research workflows
+- Externalized prompt templates and model/hyperparameter configs.
+- Added CLI-level overrides for rapid experiments.
+
+5. Tracing and dataset pipeline
+- Implemented run/session tracing (`session.json`, `events.jsonl`) at role boundaries.
+- Implemented trace-to-trajectory export for SFT data construction.
+
+6. Education and reproducibility layer
+- Added runnable notebooks for role I/O inspection, orchestration loop, and tool-use tasks.
+- Added notebook smoke execution scripts for non-interactive validation.
+
+7. Validation gates
+- Unit tests validate workflow, tracing, config layering, and dataset export.
+- Notebook smoke tests verify end-to-end educational examples remain executable.
+
 ## Documentation Index
 
 - Docs home: [`docs/README.md`](docs/README.md)
@@ -28,6 +81,8 @@ The project is built for two audiences:
 - Manus document collection + gap analysis plan: [`docs/plans/MANUS_DOCUMENT_COLLECTION_AND_GAP_PLAN.md`](docs/plans/MANUS_DOCUMENT_COLLECTION_AND_GAP_PLAN.md)
 - Notebook education plan: [`docs/plans/JUPYTER_NOTEBOOK_EDUCATION_PLAN.md`](docs/plans/JUPYTER_NOTEBOOK_EDUCATION_PLAN.md)
 - Architecture overview: [`docs/architecture/AGENT_FRAMEWORK_ARCHITECTURE.md`](docs/architecture/AGENT_FRAMEWORK_ARCHITECTURE.md)
+- Design principles: [`docs/architecture/MANUS_AGENT_DESIGN_PRINCIPLES.md`](docs/architecture/MANUS_AGENT_DESIGN_PRINCIPLES.md)
+- Codebase reading roadmap: [`docs/architecture/CODEBASE_READING_ROADMAP.md`](docs/architecture/CODEBASE_READING_ROADMAP.md)
 - CodeAct/ReAct design: [`docs/architecture/CODEACT_REACT_HYBRID_DESIGN.md`](docs/architecture/CODEACT_REACT_HYBRID_DESIGN.md)
 - Orchestration deep dive: [`docs/architecture/MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md`](docs/architecture/MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md)
 - Planner pseudocode: [`docs/architecture/MANUS_PLANNER_PSEUDOCODE.md`](docs/architecture/MANUS_PLANNER_PSEUDOCODE.md)
@@ -60,11 +115,15 @@ Primary source files:
 - Runtime mode types: `src/manus_three_agent/core/types.py`
 - CLI override plumbing: `src/manus_three_agent/eval/runner.py`
 
-## 3) OpenAI Integration
+## 3) Provider Integration (OpenAI-Compatible)
 
-- Uses official `openai` Python SDK through a dedicated adapter.
+- Uses official `openai` Python SDK through a dedicated adapter for OpenAI-compatible providers.
 - Structured JSON parsing with retry (`tenacity`) and redaction support.
-- Supports `OPENAI_BASE_URL` for OpenAI-compatible endpoints.
+- Default provider profile is Hugging Face Inference Router.
+- Supports flexible env fallback:
+  - `LLM_PROVIDER` (`huggingface` or `openai`)
+  - `HF_TOKEN` / `HF_BASE_URL`
+  - `OPENAI_API_KEY` / `OPENAI_BASE_URL`
 
 Primary source file:
 - LLM wrapper: `src/manus_three_agent/utils/llm.py`
@@ -173,6 +232,10 @@ Implemented tests cover:
 - Training export paths
 - Configuration flexibility
 
+Latest validation snapshot (local, February 24, 2026):
+- `pytest -q` -> **13 passed**
+- `./scripts/run_education_notebooks.sh` -> **3/3 notebooks passed**
+
 Representative tests:
 - `tests/test_mock_workflow.py`
 - `tests/test_tracing_infra.py`
@@ -191,7 +254,21 @@ pip install -e .[dev]
 2. Configure environment
 ```bash
 cp .env.example .env
-# set OPENAI_API_KEY in .env
+# default path: set HF_TOKEN (HF Inference Router)
+# optional: use OPENAI_API_KEY for OpenAI
+```
+
+Provider switch examples:
+```bash
+# Hugging Face (default)
+export LLM_PROVIDER=huggingface
+export HF_TOKEN=hf_xxx
+export HF_BASE_URL=https://router.huggingface.co/v1
+
+# OpenAI
+export LLM_PROVIDER=openai
+export OPENAI_API_KEY=sk-xxx
+unset HF_TOKEN
 ```
 
 3. Run mock episode

@@ -16,6 +16,8 @@ This directory contains architecture, planning, tracing, and enablement document
 ## Architecture Documentation
 
 - Framework architecture: [`architecture/AGENT_FRAMEWORK_ARCHITECTURE.md`](architecture/AGENT_FRAMEWORK_ARCHITECTURE.md)
+- Manus-style design principles: [`architecture/MANUS_AGENT_DESIGN_PRINCIPLES.md`](architecture/MANUS_AGENT_DESIGN_PRINCIPLES.md)
+- Codebase reading roadmap: [`architecture/CODEBASE_READING_ROADMAP.md`](architecture/CODEBASE_READING_ROADMAP.md)
 - CodeAct/ReAct hybrid design: [`architecture/CODEACT_REACT_HYBRID_DESIGN.md`](architecture/CODEACT_REACT_HYBRID_DESIGN.md)
 - Orchestration deep dive: [`architecture/MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md`](architecture/MANUS_AGENT_ORCHESTRATION_DEEP_DIVE.md)
 - Planner pseudocode: [`architecture/MANUS_PLANNER_PSEUDOCODE.md`](architecture/MANUS_PLANNER_PSEUDOCODE.md)

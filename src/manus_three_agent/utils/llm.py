@@ -14,13 +14,15 @@ LLMTraceHook = Callable[[dict[str, Any]], None]
 _SECRET_PATTERNS = (
     re.compile(r"sk-proj-[A-Za-z0-9_-]+"),
     re.compile(r"sk-[A-Za-z0-9_-]+"),
+    re.compile(r"hf_[A-Za-z0-9]{20,}"),
 )
 
 
 class LLMClient:
     def __init__(self, trace_hook: LLMTraceHook | None = None) -> None:
-        self.api_key = os.getenv("OPENAI_API_KEY", "").strip()
-        self.base_url = os.getenv("OPENAI_BASE_URL", "").strip()
+        self.provider = _normalize_provider(os.getenv("LLM_PROVIDER", ""))
+        self.api_key = _resolve_api_key(self.provider)
+        self.base_url = _resolve_base_url(self.provider)
         self.trace_hook = trace_hook
 
     @property
@@ -117,6 +119,37 @@ class LLMClient:
         if self.trace_hook is None:
             return
         self.trace_hook(payload)
+
+
+def _normalize_provider(raw: str) -> str:
+    value = raw.strip().lower()
+    if value in {"", "openai"}:
+        return "openai"
+    if value in {"hf", "huggingface", "huggingface_inference", "huggingface-router"}:
+        return "huggingface"
+    return value
+
+
+def _resolve_api_key(provider: str) -> str:
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    hf_token = os.getenv("HF_TOKEN", "").strip()
+
+    if provider == "huggingface":
+        return hf_token or openai_key
+    return openai_key or hf_token
+
+
+def _resolve_base_url(provider: str) -> str:
+    openai_base_url = os.getenv("OPENAI_BASE_URL", "").strip()
+    hf_base_url = os.getenv("HF_BASE_URL", "").strip()
+
+    if openai_base_url:
+        return openai_base_url
+    if hf_base_url:
+        return hf_base_url
+    if provider == "huggingface":
+        return "https://router.huggingface.co/v1"
+    return ""
 
 
 def _parse_json_content(content: str) -> dict[str, Any]:

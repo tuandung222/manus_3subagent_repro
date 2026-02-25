@@ -3,13 +3,13 @@
 # manus3-run run-episode ... --model-override configs/model_overrides.example.yaml
 
 architect:
-  model: gpt-4.1
+  model: moonshotai/Kimi-K2.5
   temperature: 0.15
   top_p: 0.9
   max_completion_tokens: 1200
 
 worker:
-  model: gpt-4.1-mini
+  model: moonshotai/Kimi-K2.5
   temperature: 0.0
   max_completion_tokens: 1100
   extra_params:
@@ -17,6 +17,6 @@ worker:
     parallel_tool_calls: false
 
 critic:
-  model: gpt-4.1-mini
+  model: moonshotai/Kimi-K2.5
   temperature: 0.0
   top_p: 0.8

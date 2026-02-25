@@ -1,0 +1,5 @@
+{"id":"task_001","goal":"Design an evaluation rubric for planner outputs with measurable quality criteria.","agentic_mode":"codeact","max_steps":3,"tags":["planner","evaluation","rubric"]}
+{"id":"task_002","goal":"Create a compact experiment plan to compare CodeAct and ReAct trajectories.","agentic_mode":"react","max_steps":3,"tags":["ablation","mode-comparison"]}
+{"id":"task_003","goal":"Propose a verifier policy for continue, replan, and end decisions with risk notes.","agentic_mode":"codeact","max_steps":3,"tags":["verifier","routing"]}
+{"id":"task_004","goal":"Draft a worker-focused failure taxonomy for tool-call errors and recovery strategies.","agentic_mode":"react","max_steps":3,"tags":["worker","tools","recovery"]}
+{"id":"task_005","goal":"Outline a trajectory curation checklist for SFT data quality and leakage prevention.","agentic_mode":"codeact","max_steps":3,"tags":["dataset","curation","quality"]}
